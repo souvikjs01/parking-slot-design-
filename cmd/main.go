@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"parking-slot/internal/model"
 	"parking-slot/internal/payments"
 	"parking-slot/internal/services"
@@ -29,8 +30,17 @@ func main() {
 
 	vehicle := &model.Vehicle{Number: "WB124AB123", Type: model.FourWheeler}
 
-	time.Sleep(20 * time.Second) // vehicle parked for 20 second
+	ticket, err := lot.GenerateTicket(vehicle, entrances[0])
+	fmt.Println("Ticket generated", ticket.ID, "for vehicle", vehicle.Number)
+	if err != nil {
+		panic(err)
+	}
+
+	time.Sleep(10 * time.Second) // vehicle parked for 20 second
 
 	payment := &payments.CardPayment{CardNumber: "1234567890"}
 
+	if err := lot.Exit(ticket, payment); err != nil {
+		panic(err)
+	}
 }

@@ -2,7 +2,9 @@ package services
 
 import (
 	"errors"
+	"fmt"
 	"parking-slot/internal/model"
+	"time"
 )
 
 type ParkingLot struct {
@@ -33,4 +35,35 @@ func (p *ParkingLot) FindAvailableSlots(vType model.VehicleType, entrance *model
 		return nil, errors.New("no slot available")
 	}
 	return nearest, nil
+}
+
+func (p *ParkingLot) GenerateTicket(vehicle *model.Vehicle, entrance *model.Entrance) (*model.Ticket, error) {
+	slot, err := p.FindAvailableSlots(vehicle.Type, entrance)
+	if err != nil {
+		return nil, err
+	}
+
+	err = slot.Park(vehicle)
+	if err != nil {
+		return nil, err
+	}
+	p.ticketSeq++
+	return &model.Ticket{
+		ID:        p.ticketSeq,
+		Vehicle:   vehicle,
+		Slot:      slot,
+		EntryTime: time.Now(),
+	}, nil
+}
+
+func (p *ParkingLot) Exit(ticket *model.Ticket, payment model.PaymentMethod) error {
+	cost := p.CostStrategy.CalculateCost(ticket.EntryTime, time.Now(), ticket.Vehicle.Type)
+
+	ticket.Cost = cost
+	ticket.Paid = true
+	ticket.Payment = payment
+	ticket.Slot.Unpark()
+
+	fmt.Printf("Vehicle %s exited. Paid $%.2f\n", ticket.Vehicle.Number, cost)
+	return nil
 }
